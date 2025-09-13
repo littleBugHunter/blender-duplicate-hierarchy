@@ -40,60 +40,6 @@ class OBJECT_OT_duplicate_hierarchy_base:
                 children.extend(self.get_all_children(child, include_hidden))
         return children
     
-    def filter_selection(self, selected_objects):
-        """Filter out objects that are children of other selected objects"""
-        filtered = []
-        for obj in selected_objects:
-            is_child_of_selected = False
-            # Check if this object is a child of any other selected object
-            parent = obj.parent
-            while parent:
-                if parent in selected_objects:
-                    is_child_of_selected = True
-                    break
-                parent = parent.parent
-            
-            if not is_child_of_selected:
-                filtered.append(obj)
-        
-        return filtered
-    
-    def duplicate_hierarchy(self, obj, linked_data=False):
-        """Duplicate an object and all its children"""
-        # Get all children (including hidden ones)
-        all_children = self.get_all_children(obj, include_hidden=True)
-        objects_to_duplicate = [obj] + all_children
-        
-        # Clear selection and select objects to duplicate
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj_to_dup in objects_to_duplicate:
-            obj_to_dup.select_set(True)
-        
-        # Set the root object as active
-        bpy.context.view_layer.objects.active = obj
-        
-        # Duplicate based on type
-        if linked_data:
-            bpy.ops.object.duplicate(linked=True)
-        else:
-            bpy.ops.object.duplicate()
-        
-        # Get the duplicated objects
-        duplicated_objects = bpy.context.selected_objects.copy()
-        
-        # Sort both lists alphabetically by name to ensure correct mapping
-        objects_to_duplicate_sorted = sorted(objects_to_duplicate, key=lambda obj: obj.name)
-        duplicated_objects_sorted = sorted(duplicated_objects, key=lambda obj: obj.name)
-        
-        # Create mapping from original to duplicated objects
-        original_to_duplicated = {}
-        duplicated_to_original = {}
-        for orig_obj, dup_obj in zip(objects_to_duplicate_sorted, duplicated_objects_sorted):
-            original_to_duplicated[orig_obj] = dup_obj
-            duplicated_to_original[dup_obj] = orig_obj
-        
-        return duplicated_objects, original_to_duplicated, duplicated_to_original
-    
     def duplicate_with_selection_mapping(self, context, linked_data=False):
         """Duplicate selected objects and their children while preserving selection mapping"""
         # Store original selection and active object
