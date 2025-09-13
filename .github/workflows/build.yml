@@ -11,10 +11,10 @@ jobs:
       steps:
         - name: Build Blender Extension
           uses: dshot92/build-blender-extension@main
-        - name: Add to Release
+        
+        - name: Upload to Release
           uses: softprops/action-gh-release@v1
           with:
-            files: |
-              /home/runner/blender-duplicate-hierarchy-.zip
+            files: "*.zip"
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
