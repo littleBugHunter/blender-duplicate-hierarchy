@@ -21,7 +21,7 @@ from bpy.types import Operator
 bl_info = {
     "name": "Duplicate Hierarchy",
     "author": "littleBugHunter (Paul Nasdalack)",
-    "version": (1, 0),
+    "version": (1, 0, 1),
     "blender": (4, 5, 0),
     "location": "3D Viewport > Object > Duplicate Hierarchy",
     "description": "Duplicate objects with all their children (hierarchy)",

@@ -30,6 +30,9 @@ The addon adds two operators to the Object menu:
 
 ## Version History
 
+### v1.0.1
+- FIXED: complex object naming patterns would lead to inconsistent selections after copying
+
 ### v1.0
 - Initial release
 - Basic duplicate hierarchy functionality
