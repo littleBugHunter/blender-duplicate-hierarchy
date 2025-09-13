@@ -95,6 +95,51 @@ class OBJECT_OT_duplicate_with_children_base:
             all_objects_to_duplicate.append(obj)
             all_objects_to_duplicate.extend(all_children)
         
+        # Store original hide states and temporarily unhide all objects
+        original_object_hide_states = {}
+        original_collection_hide_states = {}
+        original_layer_collection_hide_states = {}
+        
+        for obj in all_objects_to_duplicate:
+            original_object_hide_states[obj] = {
+                'hide_get': obj.hide_get(),
+                'hide_viewport': obj.hide_viewport,
+                'hide_select': obj.hide_select
+            }
+            obj.hide_set(False)
+            obj.hide_viewport = False
+            obj.hide_select = False
+            
+            # Also ensure collections containing the objects are visible
+            for collection in obj.users_collection:
+                if collection not in original_collection_hide_states:
+                    original_collection_hide_states[collection] = {
+                        'hide_viewport': collection.hide_viewport,
+                        'hide_select': collection.hide_select
+                    }
+                    collection.hide_viewport = False
+                    collection.hide_select = False
+                
+                # Also ensure layer collections are visible
+                def find_layer_collection(layer_collection, target_collection):
+                    """Recursively find layer collection by collection reference"""
+                    if layer_collection.collection == target_collection:
+                        return layer_collection
+                    for child in layer_collection.children:
+                        result = find_layer_collection(child, target_collection)
+                        if result:
+                            return result
+                    return None
+                
+                layer_collection = find_layer_collection(context.view_layer.layer_collection, collection)
+                if layer_collection and layer_collection not in original_layer_collection_hide_states:
+                    original_layer_collection_hide_states[layer_collection] = {
+                        'hide_viewport': layer_collection.hide_viewport,
+                        'exclude': layer_collection.exclude
+                    }
+                    layer_collection.hide_viewport = False
+                    layer_collection.exclude = False
+        
         # Clear selection and select all objects to duplicate
         bpy.ops.object.select_all(action='DESELECT')
         for obj in all_objects_to_duplicate:
@@ -105,9 +150,9 @@ class OBJECT_OT_duplicate_with_children_base:
         
         # Duplicate all at once
         if linked_data:
-            bpy.ops.object.duplicate(linked=True)
+            bpy.ops.object.duplicate('INVOKE_DEFAULT', False, linked=True)
         else:
-            bpy.ops.object.duplicate()
+            bpy.ops.object.duplicate('INVOKE_DEFAULT', False)
         
         # Get the duplicated objects
         duplicated_objects = context.selected_objects.copy()
@@ -120,6 +165,27 @@ class OBJECT_OT_duplicate_with_children_base:
         original_to_duplicated = {}
         for orig_obj, dup_obj in zip(objects_to_duplicate_sorted, duplicated_objects_sorted):
             original_to_duplicated[orig_obj] = dup_obj
+        
+        # Set hide states for duplicated objects to match their originals
+        for orig_obj, dup_obj in original_to_duplicated.items():
+            if orig_obj in original_object_hide_states:
+                hide_state = original_object_hide_states[orig_obj]
+                orig_obj.hide_set(hide_state['hide_get'])
+                dup_obj.hide_set(hide_state['hide_get'])
+                orig_obj.hide_viewport = hide_state['hide_viewport']
+                dup_obj.hide_viewport = hide_state['hide_viewport']
+                orig_obj.hide_select = hide_state['hide_select']
+                dup_obj.hide_select = hide_state['hide_select']
+        
+        # Restore original collection hide states
+        for collection, states in original_collection_hide_states.items():
+            collection.hide_viewport = states['hide_viewport']
+            collection.hide_select = states['hide_select']
+        
+        # Restore original layer collection hide states
+        for layer_collection, states in original_layer_collection_hide_states.items():
+            layer_collection.hide_viewport = states['hide_viewport']
+            layer_collection.exclude = states['exclude']
         
         # Clear selection and apply original selection pattern to duplicated objects
         bpy.ops.object.select_all(action='DESELECT')
@@ -136,7 +202,7 @@ class OBJECT_OT_duplicate_with_children_base:
             context.view_layer.objects.active = original_to_duplicated[original_active]
         
         # Start grab/move mode for the duplicated objects
-        bpy.ops.transform.translate('INVOKE_DEFAULT')
+        bpy.ops.transform.translate('INVOKE_DEFAULT', False)
         
         return len(original_selection), None
 
