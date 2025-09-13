@@ -59,9 +59,9 @@ class OBJECT_OT_duplicate_with_children_base:
         
         # Duplicate based on type
         if linked_data:
-            bpy.ops.object.duplicate_move_linked()
+            bpy.ops.object.duplicate(linked=True)
         else:
-            bpy.ops.object.duplicate_move()
+            bpy.ops.object.duplicate()
         
         # Get the duplicated objects
         duplicated_objects = bpy.context.selected_objects.copy()
@@ -80,44 +80,65 @@ class OBJECT_OT_duplicate_with_children_base:
         return duplicated_objects, original_to_duplicated, duplicated_to_original
     
     def duplicate_with_selection_mapping(self, context, linked_data=False):
-        """Duplicate filtered objects and preserve selection mapping"""
+        """Duplicate selected objects and their children while preserving selection mapping"""
         # Store original selection and active object
         original_selection = context.selected_objects.copy()
         original_active = context.active_object
         
-        # Get filtered selection (remove children of selected objects)
-        selected_objects = context.selected_objects.copy()
-        filtered_objects = self.filter_selection(selected_objects)
-        
-        if not filtered_objects:
+        if not original_selection:
             return None, "No valid objects selected"
         
-        all_mappings = {}
-        all_duplicated = []
+        # Collect all objects to duplicate (selected objects + their children)
+        all_objects_to_duplicate = []
+        for obj in original_selection:
+            all_children = self.get_all_children(obj, include_hidden=True)
+            all_objects_to_duplicate.append(obj)
+            all_objects_to_duplicate.extend(all_children)
         
-        # Duplicate each filtered object with its hierarchy
-        for obj in filtered_objects:
-            duplicated_objects, original_to_duplicated, duplicated_to_original = self.duplicate_hierarchy(obj, linked_data=linked_data)
-            all_mappings.update(original_to_duplicated)
-            all_mappings.update(duplicated_to_original)
-            all_duplicated.extend(duplicated_objects)
+        # Clear selection and select all objects to duplicate
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in all_objects_to_duplicate:
+            obj.select_set(True)
         
-        # Clear selection and deselect all original objects
+        # Set the first originally selected object as active
+        context.view_layer.objects.active = original_selection[0]
+        
+        # Duplicate all at once
+        if linked_data:
+            bpy.ops.object.duplicate(linked=True)
+        else:
+            bpy.ops.object.duplicate()
+        
+        # Get the duplicated objects
+        duplicated_objects = context.selected_objects.copy()
+        
+        # Sort both lists alphabetically by name to ensure correct mapping
+        objects_to_duplicate_sorted = sorted(all_objects_to_duplicate, key=lambda obj: obj.name)
+        duplicated_objects_sorted = sorted(duplicated_objects, key=lambda obj: obj.name)
+        
+        # Create mapping from original to duplicated objects
+        original_to_duplicated = {}
+        for orig_obj, dup_obj in zip(objects_to_duplicate_sorted, duplicated_objects_sorted):
+            original_to_duplicated[orig_obj] = dup_obj
+        
+        # Clear selection and apply original selection pattern to duplicated objects
         bpy.ops.object.select_all(action='DESELECT')
         
-        # Apply original selection pattern to duplicated objects
-        for dup_obj in all_duplicated:
-            if dup_obj in all_mappings:
-                orig_obj = all_mappings[dup_obj]
-                dup_obj.select_set(orig_obj in original_selection)
+        # Deselect all original objects and select corresponding duplicated objects
+        for orig_obj in original_selection:
+            orig_obj.select_set(False)
+            if orig_obj in original_to_duplicated:
+                dup_obj = original_to_duplicated[orig_obj]
+                dup_obj.select_set(True)
         
-        if original_active and original_active in all_mappings:
-            context.view_layer.objects.active = all_mappings[original_active]
+        # Set active object to the duplicate of the original active object
+        if original_active and original_active in original_to_duplicated:
+            context.view_layer.objects.active = original_to_duplicated[original_active]
         
         # Start grab/move mode for the duplicated objects
         bpy.ops.transform.translate('INVOKE_DEFAULT')
         
-        return len(filtered_objects), None
+        return len(original_selection), None
 
 class OBJECT_OT_duplicate_with_children_cloned(OBJECT_OT_duplicate_with_children_base, Operator):
     """Duplicate selected objects with all their children (cloned data)"""
