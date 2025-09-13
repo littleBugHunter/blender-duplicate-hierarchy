@@ -45,10 +45,6 @@ class OBJECT_OT_duplicate_with_children_base:
     
     def duplicate_hierarchy(self, obj, linked_data=False):
         """Duplicate an object and all its children"""
-        # Store original selection and active object
-        original_selection = bpy.context.selected_objects.copy()
-        original_active = bpy.context.active_object
-        
         # Get all children (including hidden ones)
         all_children = self.get_all_children(obj, include_hidden=True)
         objects_to_duplicate = [obj] + all_children
@@ -70,7 +66,58 @@ class OBJECT_OT_duplicate_with_children_base:
         # Get the duplicated objects
         duplicated_objects = bpy.context.selected_objects.copy()
         
-        return duplicated_objects
+        # Sort both lists alphabetically by name to ensure correct mapping
+        objects_to_duplicate_sorted = sorted(objects_to_duplicate, key=lambda obj: obj.name)
+        duplicated_objects_sorted = sorted(duplicated_objects, key=lambda obj: obj.name)
+        
+        # Create mapping from original to duplicated objects
+        original_to_duplicated = {}
+        duplicated_to_original = {}
+        for orig_obj, dup_obj in zip(objects_to_duplicate_sorted, duplicated_objects_sorted):
+            original_to_duplicated[orig_obj] = dup_obj
+            duplicated_to_original[dup_obj] = orig_obj
+        
+        return duplicated_objects, original_to_duplicated, duplicated_to_original
+    
+    def duplicate_with_selection_mapping(self, context, linked_data=False):
+        """Duplicate filtered objects and preserve selection mapping"""
+        # Store original selection and active object
+        original_selection = context.selected_objects.copy()
+        original_active = context.active_object
+        
+        # Get filtered selection (remove children of selected objects)
+        selected_objects = context.selected_objects.copy()
+        filtered_objects = self.filter_selection(selected_objects)
+        
+        if not filtered_objects:
+            return None, "No valid objects selected"
+        
+        all_mappings = {}
+        all_duplicated = []
+        
+        # Duplicate each filtered object with its hierarchy
+        for obj in filtered_objects:
+            duplicated_objects, original_to_duplicated, duplicated_to_original = self.duplicate_hierarchy(obj, linked_data=linked_data)
+            all_mappings.update(original_to_duplicated)
+            all_mappings.update(duplicated_to_original)
+            all_duplicated.extend(duplicated_objects)
+        
+        # Clear selection and deselect all original objects
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        # Apply original selection pattern to duplicated objects
+        for dup_obj in all_duplicated:
+            if dup_obj in all_mappings:
+                orig_obj = all_mappings[dup_obj]
+                dup_obj.select_set(orig_obj in original_selection)
+        
+        if original_active and original_active in all_mappings:
+            context.view_layer.objects.active = all_mappings[original_active]
+        
+        # Start grab/move mode for the duplicated objects
+        bpy.ops.transform.translate('INVOKE_DEFAULT')
+        
+        return len(filtered_objects), None
 
 class OBJECT_OT_duplicate_with_children_cloned(OBJECT_OT_duplicate_with_children_base, Operator):
     """Duplicate selected objects with all their children (cloned data)"""
@@ -83,31 +130,13 @@ class OBJECT_OT_duplicate_with_children_cloned(OBJECT_OT_duplicate_with_children
         return context.active_object is not None and context.mode == 'OBJECT'
     
     def execute(self, context):
-        # Get filtered selection (remove children of selected objects)
-        selected_objects = context.selected_objects.copy()
-        filtered_objects = self.filter_selection(selected_objects)
+        result, error = self.duplicate_with_selection_mapping(context, linked_data=False)
         
-        if not filtered_objects:
-            self.report({'WARNING'}, "No valid objects selected")
+        if error:
+            self.report({'WARNING'}, error)
             return {'CANCELLED'}
         
-        all_duplicated = []
-        
-        # Duplicate each filtered object with its hierarchy
-        for obj in filtered_objects:
-            duplicated = self.duplicate_hierarchy(obj, linked_data=False)
-            all_duplicated.extend(duplicated)
-        
-        # Clear selection and select all duplicated objects
-        bpy.ops.object.select_all(action='DESELECT')
-        for dup_obj in all_duplicated:
-            dup_obj.select_set(True)
-        
-        # Set the first duplicated object as active
-        if all_duplicated:
-            context.view_layer.objects.active = all_duplicated[0]
-        
-        self.report({'INFO'}, f"Duplicated {len(filtered_objects)} object(s) with children")
+        self.report({'INFO'}, f"Duplicated {result} object(s) with children")
         return {'FINISHED'}
 
 class OBJECT_OT_duplicate_with_children_linked(OBJECT_OT_duplicate_with_children_base, Operator):
@@ -121,31 +150,13 @@ class OBJECT_OT_duplicate_with_children_linked(OBJECT_OT_duplicate_with_children
         return context.active_object is not None and context.mode == 'OBJECT'
     
     def execute(self, context):
-        # Get filtered selection (remove children of selected objects)
-        selected_objects = context.selected_objects.copy()
-        filtered_objects = self.filter_selection(selected_objects)
+        result, error = self.duplicate_with_selection_mapping(context, linked_data=True)
         
-        if not filtered_objects:
-            self.report({'WARNING'}, "No valid objects selected")
+        if error:
+            self.report({'WARNING'}, error)
             return {'CANCELLED'}
         
-        all_duplicated = []
-        
-        # Duplicate each filtered object with its hierarchy
-        for obj in filtered_objects:
-            duplicated = self.duplicate_hierarchy(obj, linked_data=True)
-            all_duplicated.extend(duplicated)
-        
-        # Clear selection and select all duplicated objects
-        bpy.ops.object.select_all(action='DESELECT')
-        for dup_obj in all_duplicated:
-            dup_obj.select_set(True)
-        
-        # Set the first duplicated object as active
-        if all_duplicated:
-            context.view_layer.objects.active = all_duplicated[0]
-        
-        self.report({'INFO'}, f"Duplicated {len(filtered_objects)} object(s) with children (linked)")
+        self.report({'INFO'}, f"Duplicated {result} object(s) with children (linked)")
         return {'FINISHED'}
 
 def menu_func_cloned(self, context):
