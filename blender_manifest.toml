@@ -1,0 +1,29 @@
+# Blender Manifest for Duplicate Hierarchy Addon
+schema_version = "1.0.0"
+
+id = "duplicate_hierarchy"
+name = "Duplicate Hierarchy"
+tagline = "Duplicate objects with all their children (hierarchy)"
+maintainer = "littleBugHunter (Paul Nasdalack)"
+type = "add-on"
+version = "1.0.0"
+
+website = "https://github.com/littleBugHunter/blender-duplicate-hierarchy"
+tags = ["Object", "Scene", "3D View"]
+
+blender_version_min = "4.5.0"
+
+license = [
+  "GPL-3.0-or-later",
+]
+
+copyright = [
+  "2025 Paul Nasdalack",
+]
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  ".*",
+  "*.pyc",
+]
