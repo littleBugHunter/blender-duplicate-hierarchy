@@ -1,13 +1,11 @@
 import bpy
-import bmesh
 from bpy.types import Operator
-from bpy.props import BoolProperty
 
 bl_info = {
     "name": "Duplicate with Children",
-    "author": "Paul Nasdalack",
+    "author": "littleBugHunter (Paul Nasdalack)",
     "version": (1, 0),
-    "blender": (2, 80, 0),
+    "blender": (4, 5, 0),
     "location": "3D Viewport > Object > Duplicate with Children",
     "description": "Duplicate objects with all their children",
     "category": "Object",
