@@ -1,18 +1,35 @@
+"""
+Duplicate Hierarchy Blender Addon
+Copyright (c) 2025 Paul Nasdalack
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+The Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 import bpy
 from bpy.types import Operator
 
 bl_info = {
-    "name": "Duplicate with Children",
+    "name": "Duplicate Hierarchy",
     "author": "littleBugHunter (Paul Nasdalack)",
     "version": (1, 0),
     "blender": (4, 5, 0),
-    "location": "3D Viewport > Object > Duplicate with Children",
-    "description": "Duplicate objects with all their children",
+    "location": "3D Viewport > Object > Duplicate Hierarchy",
+    "description": "Duplicate objects with all their children (hierarchy)",
     "category": "Object",
 }
 
-class OBJECT_OT_duplicate_with_children_base:
-    """Base class for duplicate with children operators"""
+class OBJECT_OT_duplicate_hierarchy_base:
+    """Base class for duplicate hierarchy operators"""
     
     def get_all_children(self, obj, include_hidden=True):
         """Recursively get all children of an object"""
@@ -204,10 +221,10 @@ class OBJECT_OT_duplicate_with_children_base:
         
         return len(original_selection), None
 
-class OBJECT_OT_duplicate_with_children_cloned(OBJECT_OT_duplicate_with_children_base, Operator):
-    """Duplicate selected objects with all their children (cloned data)"""
-    bl_idname = "object.duplicate_with_children_cloned"
-    bl_label = "Duplicate with Children (Cloned)"
+class OBJECT_OT_duplicate_hierarchy(OBJECT_OT_duplicate_hierarchy_base, Operator):
+    """Duplicate selected objects with all their children"""
+    bl_idname = "object.duplicate_hierarchy"
+    bl_label = "Duplicate Hierarchy "
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -224,10 +241,10 @@ class OBJECT_OT_duplicate_with_children_cloned(OBJECT_OT_duplicate_with_children
         self.report({'INFO'}, f"Duplicated {result} object(s) with children")
         return {'FINISHED'}
 
-class OBJECT_OT_duplicate_with_children_linked(OBJECT_OT_duplicate_with_children_base, Operator):
+class OBJECT_OT_duplicate_hierarchy_linked(OBJECT_OT_duplicate_hierarchy_base, Operator):
     """Duplicate selected objects with all their children (linked data)"""
-    bl_idname = "object.duplicate_with_children_linked"
-    bl_label = "Duplicate with Children (Linked)"
+    bl_idname = "object.duplicate_hierarchy_linked"
+    bl_label = "Duplicate Hierarchy (Linked)"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -244,22 +261,22 @@ class OBJECT_OT_duplicate_with_children_linked(OBJECT_OT_duplicate_with_children
         self.report({'INFO'}, f"Duplicated {result} object(s) with children (linked)")
         return {'FINISHED'}
 
-def menu_func_cloned(self, context):
-    self.layout.operator(OBJECT_OT_duplicate_with_children_cloned.bl_idname)
+def menu_func(self, context):
+    self.layout.operator(OBJECT_OT_duplicate_hierarchy.bl_idname)
 
 def menu_func_linked(self, context):
-    self.layout.operator(OBJECT_OT_duplicate_with_children_linked.bl_idname)
+    self.layout.operator(OBJECT_OT_duplicate_hierarchy_linked.bl_idname)
 
 def register():
-    bpy.utils.register_class(OBJECT_OT_duplicate_with_children_cloned)
-    bpy.utils.register_class(OBJECT_OT_duplicate_with_children_linked)
-    bpy.types.VIEW3D_MT_object.append(menu_func_cloned)
+    bpy.utils.register_class(OBJECT_OT_duplicate_hierarchy)
+    bpy.utils.register_class(OBJECT_OT_duplicate_hierarchy_linked)
+    bpy.types.VIEW3D_MT_object.append(menu_func)
     bpy.types.VIEW3D_MT_object.append(menu_func_linked)
 
 def unregister():
-    bpy.utils.unregister_class(OBJECT_OT_duplicate_with_children_cloned)
-    bpy.utils.unregister_class(OBJECT_OT_duplicate_with_children_linked)
-    bpy.types.VIEW3D_MT_object.remove(menu_func_cloned)
+    bpy.utils.unregister_class(OBJECT_OT_duplicate_hierarchy)
+    bpy.utils.unregister_class(OBJECT_OT_duplicate_hierarchy_linked)
+    bpy.types.VIEW3D_MT_object.remove(menu_func)
     bpy.types.VIEW3D_MT_object.remove(menu_func_linked)
 
 if __name__ == "__main__":
