@@ -1,0 +1,13 @@
+name: Build Extension
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:  # Allows manual triggering from the Actions tab
+
+jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Build Blender Extension
+          uses: dshot92/build-blender-extension@main
