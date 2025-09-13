@@ -103,8 +103,12 @@ class OBJECT_OT_duplicate_hierarchy_base:
         
         # Clear selection and select all objects to duplicate
         bpy.ops.object.select_all(action='DESELECT')
+        copy_index = 0
+        copy_index_name = "__duplicate_hierarchy_copy_index"
         for obj in all_objects_to_duplicate:
             obj.select_set(True)
+            obj[copy_index_name] = copy_index
+            copy_index += 1
         
         # Set the first originally selected object as active
         context.view_layer.objects.active = original_selection[0]
@@ -118,14 +122,16 @@ class OBJECT_OT_duplicate_hierarchy_base:
         # Get the duplicated objects
         duplicated_objects = context.selected_objects.copy()
         
-        # Sort both lists alphabetically by name to ensure correct mapping
-        objects_to_duplicate_sorted = sorted(all_objects_to_duplicate, key=lambda obj: obj.name)
-        duplicated_objects_sorted = sorted(duplicated_objects, key=lambda obj: obj.name)
+        # Sort both list by the copy_index to ensure correct mapping
+        objects_to_duplicate_sorted = sorted(all_objects_to_duplicate, key=lambda obj: obj[copy_index_name])
+        duplicated_objects_sorted = sorted(duplicated_objects, key=lambda obj: obj[copy_index_name])
         
         # Create mapping from original to duplicated objects
         original_to_duplicated = {}
         for orig_obj, dup_obj in zip(objects_to_duplicate_sorted, duplicated_objects_sorted):
             original_to_duplicated[orig_obj] = dup_obj
+            del orig_obj[copy_index_name]
+            del dup_obj[copy_index_name]
         
         # Set hide states for duplicated objects to match their originals
         for orig_obj, dup_obj in original_to_duplicated.items():
